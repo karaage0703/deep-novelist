@@ -82,7 +82,7 @@ def main():
     print("Deep Novelist を起動中...", flush=True)
     interface = create_web_interface()
     interface.queue()  # ストリーム出力のためにキューを有効化
-    interface.launch(server_name="127.0.0.1", server_port=7861, share=True)
+    interface.launch(server_name="0.0.0.0", server_port=7861, share=True)
 
 
 if __name__ == "__main__":
