@@ -1,3 +1,4 @@
-# Requirements for the Python project
-# Add your project dependencies here.
-pytest
+gradio>=4.0.0
+ollama>=0.1.0
+requests>=2.31.0
+pytest>=7.0.0
