@@ -1,6 +1,4 @@
-import sys
 import gradio as gr
-from typing import Optional, Tuple, Generator
 from .novel_generator import generate_and_save_novel
 from .ollama_connection import get_server_url, check_server_availability, get_available_models
 
