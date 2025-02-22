@@ -1,6 +1,6 @@
 import sys
 import traceback
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Generator
 from ollama import Client
 from .ollama_connection import check_server_availability, get_available_models
 
@@ -47,16 +47,16 @@ class NovelGenerator:
         self.client = Client(host=base_url)
         self.models = get_available_models(base_url)
 
-    def generate_novel(self, description: str, model: str, style: Optional[str] = None) -> str:
-        """小説を生成する
+    def generate_novel_stream(self, description: str, model: str, style: Optional[str] = None) -> Generator[str, None, None]:
+        """小説をストリーム形式で生成する
 
         Args:
             description: 小説のプロット説明
             model: 使用するモデル名
             style: 文体の指定（オプション）
 
-        Returns:
-            str: 生成された小説のテキスト
+        Yields:
+            str: 生成された小説のテキストの断片
 
         Raises:
             ValueError: モデルが選択されていないか、利用できない場合
@@ -87,15 +87,14 @@ class NovelGenerator:
 - マークダウンの装飾は使用しないでください
 - テキストのみを返してください
 """
-        response = self.client.generate(model=model, prompt=prompt, stream=False)
-
-        # 生成されたテキストをクリーンアップ
-        return clean_text(response["response"])
+        for chunk in self.client.generate(model=model, prompt=prompt, stream=True):
+            if "response" in chunk:
+                yield chunk["response"]
 
 
 def generate_and_save_novel(
     description: str, model: str, style: Optional[str] = None, ip: Optional[str] = None
-) -> Tuple[str, str]:
+) -> Generator[Tuple[str, str], None, None]:
     """小説を生成して保存する
 
     Args:
@@ -104,8 +103,8 @@ def generate_and_save_novel(
         style: 文体の指定（オプション）
         ip: サーバーのIPアドレス（オプション）
 
-    Returns:
-        Tuple[str, str]: (生成された小説のテキスト, ステータスメッセージ)
+    Yields:
+        Tuple[str, str]: (現在までの生成テキスト, ステータスメッセージ)
     """
     try:
         from .ollama_connection import get_server_url
@@ -113,21 +112,21 @@ def generate_and_save_novel(
         base_url = get_server_url(ip)
         generator = NovelGenerator(base_url)
 
-        # 小説の生成
-        generated_text = generator.generate_novel(description, model, style)
+        # 小説の生成（ストリーム形式）
+        generated_text = ""
+        for chunk in generator.generate_novel_stream(description, model, style):
+            generated_text += chunk
+            yield generated_text, "小説を生成中..."
 
         # 生成されたテキストを一時ファイルに保存
         temp_file = "generated_novel.txt"
         with open(temp_file, "w", encoding="utf-8") as f:
-            f.write(generated_text)
+            f.write(clean_text(generated_text))
 
-        return (
-            generated_text,
-            f"小説の生成が完了しました！\n保存先: {temp_file}",
-        )
+        yield generated_text, f"小説の生成が完了しました！\n保存先: {temp_file}"
 
     except Exception as e:
         error_msg = f"エラーが発生しました: {str(e)}"
         print(error_msg, file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
-        return "", error_msg
+        yield "", error_msg

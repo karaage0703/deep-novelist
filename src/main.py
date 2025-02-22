@@ -1,6 +1,6 @@
 import sys
 import gradio as gr
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Generator
 from .novel_generator import generate_and_save_novel
 from .ollama_connection import get_server_url, check_server_availability, get_available_models
 
@@ -56,6 +56,8 @@ def create_web_interface():
             fn=generate_and_save_novel,
             inputs=[description_input, model_input, style_input, ip_input],
             outputs=[novel_output, status_output],
+            api_name="generate_novel",
+            show_progress=True,
         )
 
         gr.Markdown("""
@@ -65,7 +67,7 @@ def create_web_interface():
         3. プロットの説明を入力
         4. 必要に応じて文体を指定
         5. 「小説を生成」ボタンをクリック
-        6. 生成された小説を確認
+        6. 生成された小説を確認（リアルタイムで表示されます）
         7. 必要に応じてコピーボタンでテキストをコピー
 
         ## 注意事項
@@ -81,6 +83,7 @@ def main():
     """メイン関数"""
     print("Deep Novelist を起動中...", flush=True)
     interface = create_web_interface()
+    interface.queue()  # ストリーム出力のためにキューを有効化
     interface.launch(server_name="127.0.0.1", server_port=7861, share=True)
 
 
